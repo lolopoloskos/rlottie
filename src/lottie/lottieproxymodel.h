@@ -243,6 +243,18 @@ public:
         rlottie::Color col = data(prop).color()(info);
         return LottieColor(col.r(), col.g(), col.b());
     }
+    VPointF point(rlottie::Property prop, int frame) const
+    {
+        rlottie::FrameInfo info(frame);
+        rlottie::Point pt = data(prop).point()(info);
+        return VPointF(pt.x(), pt.y());
+    }
+    VSize scale(rlottie::Property prop, int frame) const
+    {
+        rlottie::FrameInfo info(frame);
+        rlottie::Size sz = data(prop).size()(info);
+        return VSize(sz.w(), sz.h());
+    }
     float opacity(rlottie::Property prop, int frame) const
     {
         rlottie::FrameInfo info(frame);
@@ -334,4 +346,33 @@ private:
     LOTFilter                  mFilter;
 };
 
+template <>
+class LOTProxyModel<LOTGroupData>
+{
+public:
+    LOTProxyModel(LOTGroupData *model = nullptr): _modelData(model) {}
+    bool hasModel() const { return _modelData ? true : false; }
+    LOTFilter& filter() {return mFilter;}
+    const char* name() const {return _modelData->name();}
+    LOTTransformData* transform() const { return _modelData->mTransform; }
+    VMatrix matrix(int frame) const
+    {
+        VMatrix mS, mR, mT;
+        if (mFilter.hasFilter(rlottie::Property::TrScale)) {
+            VSize s = mFilter.scale(rlottie::Property::TrScale, frame);
+            mS.scale(s.width() / 100.0, s.height() / 100.0);
+        }
+        if (mFilter.hasFilter(rlottie::Property::TrRotation)) {
+            mR.rotate(mFilter.value(rlottie::Property::TrRotation, frame));
+        }
+        if (mFilter.hasFilter(rlottie::Property::TrPosition)) {
+            mT.translate(mFilter.point(rlottie::Property::TrPosition, frame));
+        }
+
+        return _modelData->mTransform->matrix(frame) * mS * mR * mT;
+    }
+private:
+    LOTGroupData               *_modelData;
+    LOTFilter                  mFilter;
+};
 #endif // LOTTIEITEM_H
